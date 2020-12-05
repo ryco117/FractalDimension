@@ -24,11 +24,11 @@ Then, based on the frequency and magnitude of the detected notes, various parame
 - Run the `FractalDimension.exe` executable within
 
 ### Example Videos (Click for links)
-##### Death Cab for Cutie
-[![Death Cab for Cutie Demo](https://img.youtube.com/vi/p_YMFBeia4w/0.jpg)](https://www.youtube.com/watch?v=p_YMFBeia4w "Death Cab for Cutie Demo")
-##### Madeon Demo
-[![Madeon Demo](https://img.youtube.com/vi/f5pirPzv0Yk/0.jpg)](https://www.youtube.com/watch?v=f5pirPzv0Yk&t=2 "Madeon Demo")
-##### Santana Demo
-[![Santana Demo](https://img.youtube.com/vi/yuSlCbhd97U/0.jpg)](https://www.youtube.com/watch?v=yuSlCbhd97U&t=4 "Santana Demo")
-##### L.Dre Demo
-[![L.Dre Demo](https://img.youtube.com/vi/FVB3HRSrhi8/0.jpg)](https://www.youtube.com/watch?v=FVB3HRSrhi8&t=2 "L.Dre Demo")
+##### Bassnectar Demo
+[![Bassnectar Demo](https://img.youtube.com/vi/OQv0IDQd8H8/0.jpg)](https://www.youtube.com/watch?v=OQv0IDQd8H8 "Bassnectar Demo")
+##### Queen Demo
+[![Queen Demo](https://img.youtube.com/vi/TabDKU24C6s/0.jpg)](https://www.youtube.com/watch?v=TabDKU24C6s "Queen Demo")
+##### Styx Demo
+[![Styx Demo](https://img.youtube.com/vi/Eo2TI3FJtoM/0.jpg)](https://www.youtube.com/watch?v=Eo2TI3FJtoM "Styx Demo")
+##### Luigi Sambuy Demo
+[![L.Dre Demo](https://img.youtube.com/vi/_9rtE6Lh7aY/0.jpg)](https://www.youtube.com/watch?v=_9rtE6Lh7aY "Luigi Sambuy Demo")

@@ -94,8 +94,8 @@ type FractalDimension() =
             let toWorldSpace t noteType =
                 let s = match noteType with
                         | Bass -> System.Math.Pow(float t, 0.75)
-                        | Mids -> System.Math.Pow(float t, 0.7)
-                        | High -> float t
+                        | Mids -> System.Math.Pow(float t, 0.55)
+                        | High -> System.Math.Pow(float t, 0.4)
                 CubeFillingCurve.curveToCubeN 8 s
             let freqResolution = samplingRate / float complex.Length
             let getStrongest maxCount delta (input: NAudio.Dsp.Complex[]) =
@@ -228,7 +228,7 @@ type FractalDimension() =
         midsHole <- midsHole + (midsHoleTarget - midsHole) * smooth
         highHole <- highHole + (highHoleTarget - highHole) * smooth
         if play then
-            let modulo = 16.f * MathHelper.Pi
+            let modulo = 15.f * MathHelper.Pi
             let half = modulo / 2.f
             let m = abs (((float32 playTime + half) % modulo) / half - 1.f)
             let d = orbitDist - 2.2f * m
@@ -249,7 +249,7 @@ type FractalDimension() =
         if play && not question then
             let magic = -cos (playTime / 6.)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
-            let scale = -(0.225 * (asin (-cos (playTime / 12.)) + 1.) + 1.85)
+            let scale = -(0.15 * (asin (-cos (playTime / 6.)) + 1.) + 1.95)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "mandelboxScale"), float32 scale)
 
         let smoothScale (v: Vector2) (arr: Note[]) =

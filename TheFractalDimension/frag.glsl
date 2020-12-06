@@ -99,7 +99,7 @@ float boundReflect(float x, float b) {
 
 const float power = 9.0;
 vec3 gradient;
-vec4 orbitTrap = vec4(1.0, 1.0, 1.0, 1.0);
+vec4 orbitTrap;
 const vec3 cutNorm = normalize(vec3(-1.0, 1.0, -1.0));
 float potential(vec3 t)
 {
@@ -125,6 +125,8 @@ float distanceEstimator(vec3 t)
     //vec3 s = vec3(bound(t.x, 4.0), bound(t.y, 4.0), bound(t.z, 4.0));
 	
 	const int maxIterations = 7;
+	orbitTrap = vec4(1.0, 1.0, 1.0, 1.0);
+
 	// Balls
 	//return length(t) - 0.1;
 
@@ -238,7 +240,7 @@ float distanceEstimator(vec3 t)
 const float maxBrightness = 1.4;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
 vec4 scaleColor(float si, vec3 col) {
-	col *= pow(1.0 - si/float(maxIterations), 0.3);
+	col *= pow(1.0 - si/float(maxIterations), 0.275);
 	if(dot(col, col) > maxBrightnessR2) {
 		col = maxBrightness*normalize(col);
 	}
@@ -260,11 +262,11 @@ void main(void)
 	float magicTheta = pi*magicNumber;
 	float choiceDot = dot(coord.xy, vec2(cos(magicTheta), sin(magicTheta)));
 	vec2 choice = choiceDot > 0.0 ? avgHighHole : avgMidsHole;
-	float otherThing = 2.15*dot(choice, coord.xy);
-	vec2 newCoord = coord.xy + pow(abs(choiceDot), 1.15)*otherThing*choice;
+	float otherThing = 2.2*dot(choice, coord.xy);
+	vec2 newCoord = coord.xy + pow(abs(choiceDot), 1.145)*otherThing*choice;
 	newCoord = vec2(boundReflect(newCoord.x, 1.0), boundReflect(newCoord.y, 1.0));
 	vec3 direction = normalize((projectiveInverse * vec4(newCoord.x*d, newCoord.y*d, projectionConstant, d)).xyz);
-	const float minTravel = 0.625;
+	const float minTravel = 0.63;
 	vec3 pos = cameraPosition + minTravel*direction;
 	const float hitDistance = 0.00001;
 	float minDist = maxDistance;
@@ -284,9 +286,9 @@ void main(void)
 
 		if (dist <= hitDistance) {
             float smoothI = float(i);// - (log(travel)/10.0);
-			orbitTrap.x = pow(orbitTrap.x, 0.65);
-			orbitTrap.y = pow(orbitTrap.y, 0.65);
-			orbitTrap.z = pow(orbitTrap.z, 0.65);
+			orbitTrap.x = pow(orbitTrap.x, 0.725);
+			orbitTrap.y = pow(orbitTrap.y, 0.725);
+			orbitTrap.z = pow(orbitTrap.z, 0.725);
 			//orbitTrap = vec4(mix(orbitTrap.xyz, abs(pos), exp(-(pos.x*pos.x + pos.y*pos.y + pos.z*pos.z))), orbitTrap.w);
 			//orbitTrap = vec4(mix(orbitTrap.xyz, abs(pos), exp(-(abs(pos.x) + abs(pos.y) + abs(pos.z)))), orbitTrap.w);
 			fragColor = scaleColor(smoothI, orbitTrap.xyz);
@@ -304,7 +306,7 @@ void main(void)
 			direction = normalize((projectiveInverse * vec4(coord.x*d, coord.y*d, projectionConstant, d)).xyz);
 			vec3 sinDir = sin(100.0*direction);
 			vec3 base = vec3(exp(-3.0*length(sin(pi * bassHole + 1.0) - sinDir)), exp(-4.0*length(sin(e * midsHole + 1.3) - sinDir)), exp(-3.0*length(sin(9.6*highHole + 117.69420) - sinDir)));
-			fragColor = vec4((question ? 0.6 : 0.36) * base, 1.0);
+			fragColor = vec4((question ? 0.65 : 0.4) * base, 1.0);
 			return;
 		}
 	}

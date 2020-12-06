@@ -16,7 +16,7 @@ uniform vec2 avgHighHole;
 
 const float pi = 3.14159265358;
 const float e = 2.718281828;
-const int maxIterations = 40;
+const int maxIterations = 45;
 const float epsilon = 0.00001;
 const vec3 dirX = vec3(1.0, 0.0, 0.0);
 const vec3 dirY = vec3(0.0, 1.0, 0.0);
@@ -240,7 +240,7 @@ float distanceEstimator(vec3 t)
 const float maxBrightness = 1.4;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
 vec4 scaleColor(float si, vec3 col) {
-	col *= pow(1.0 - si/float(maxIterations), 0.275);
+	col *= pow(1.0 - si/float(maxIterations), 0.3);
 	if(dot(col, col) > maxBrightnessR2) {
 		col = maxBrightness*normalize(col);
 	}
@@ -258,7 +258,7 @@ void main(void)
 	const float near = 1.0;
 	const float far = 2.0;
 	const float projectionConstant = d*(far+near)/(far-near) - (2.0*far*near)/(far-near);
-	const float maxDistance = 4.0;
+	const float maxDistance = 5.0;
 	float magicTheta = pi*magicNumber;
 	float choiceDot = dot(coord.xy, vec2(cos(magicTheta), sin(magicTheta)));
 	vec2 choice = choiceDot > 0.0 ? avgHighHole : avgMidsHole;

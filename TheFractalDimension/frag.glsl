@@ -9,7 +9,6 @@ uniform float magicNumber;
 uniform float mandelboxScale;
 uniform float kaleido;
 uniform int deType;
-uniform bool question;
 uniform vec3 bassHole;
 uniform vec3 midsHole;
 uniform vec3 highHole;
@@ -157,9 +156,9 @@ float distanceEstimator(vec3 t)
 	else if (deType == 2) {
 		const float reScale = 1.2;
 		t *= reScale;
-		t = vec3(bound(t.x, 1.3), bound(t.y, 1.3), bound(t.z, 1.3));
+		t = vec3(bound(t.x, 1.5), bound(t.y, 1.5), bound(t.z, 1.5));
 		vec3 s = t;
-		float power = 6.0 + 3.5*(magicNumber + 1.0);
+		float power = 5.5 + 4.0*(magicNumber + 1.0);
 		float dr = 1.0;
 		float r = 0.0;
 		for (int i = 0; i < maxIterations; i++) {
@@ -289,7 +288,7 @@ void main(void)
 	vec2 newestCoord = length(newCoord)*vec2(cos(magicTheta), sin(magicTheta));
 	float newMagic = (magicNumber + 2.0)/2.0 + 1.75*dot(coord, avgMidsHole);
 	for (int i = 0; i < maxIterations; i++) {
-		float dist = question ? 1000.0 : newMagic - travel;
+		float dist = newMagic - travel;
 		if(dist > 0.0) {
 			pos += dist*direction;
 			travel += dist;
@@ -319,7 +318,7 @@ void main(void)
 			direction = normalize((projectiveInverse * vec4(coord.x*d, coord.y*d, projectionConstant, d)).xyz);
 			vec3 sinDir = sin(100.0*direction);
 			vec3 base = vec3(exp(-3.0*length(sin(pi * bassHole + 1.0) - sinDir)), exp(-4.0*length(sin(e * midsHole + 1.3) - sinDir)), exp(-3.0*length(sin(9.6*highHole + 117.69420) - sinDir)));
-			fragColor = vec4((question ? 0.65 : 0.42) * base, 1.0);
+			fragColor = vec4((deType == 0 ? 0.75 : 0.45) * base, 1.0);
 			return;
 		}
 	}

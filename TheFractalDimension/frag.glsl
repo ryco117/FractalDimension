@@ -221,7 +221,7 @@ float distanceEstimator(vec3 t)
 		float d1=max(xx,max(yy,zz)); //distance to the box
 		float d=d1; //current computed distance
 		float p=1.0;
-		float mengerScale = 3.5 + magicNumber;
+		float mengerScale = 3.25 + 0.5*magicNumber;
 		float halfScale = mengerScale / 2.0;
 
 		for (int i = 0; i < maxIterations; i++) {

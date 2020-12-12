@@ -263,8 +263,8 @@ type FractalDimension() =
             let scale = -(0.15 * (asin (-cos (playTime / 6.)) + 1.) + 1.95)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "mandelboxScale"), float32 scale)
             let kaleidoscope =
-                let t = (playTime - kaleidoTime) / 1.42
-                if kaleido then min t 1. else max (1. - t) 0.
+                let t = sqrt (min ((playTime - kaleidoTime) / 1.5) 1.)
+                if kaleido then t else (1. - t)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "kaleido"), float32 kaleidoscope)
 
         let smoothScale (v: Vector2) (arr: Note[]) =

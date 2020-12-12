@@ -28,6 +28,15 @@ open OpenTK.Windowing.GraphicsLibraryFramework // For keyboard/mouse input
 type Note = {freq: float32; mag: float32}
 type NoteRange = Bass | Mids | High
 
+// Fractal Types?!?!
+type DistanceEstimate = None | Mandelbox | Mandelbulb | Klienian | Menger
+let deToInt = function
+| None -> 0
+| Mandelbox -> 1
+| Mandelbulb -> 2
+| Klienian -> 3
+| Menger -> 4
+
 let windowsSettings = NativeWindowSettings.Default
 windowsSettings.NumberOfSamples <- 8
 windowsSettings.Title <- "FractalDimension"
@@ -43,7 +52,7 @@ type FractalDimension() =
     // TODO: Remove this when OpenTK fixes MouseCursor.Empty
     let emptyCursor = new Input.MouseCursor(0, 0, 1, 1, Array.zeroCreate<byte> 4)
     let mutable tick = 0UL
-    let mutable question = false
+    let mutable distanceEstimate = Mandelbox
 
     // Render
     let mutable renderShader = 0
@@ -54,6 +63,8 @@ type FractalDimension() =
     let orbitDist = 3.8f
     let mutable play = true
     let mutable playTime = 0.
+    let mutable kaleido = false
+    let mutable kaleidoTime = -100.
     let mutable lastAngularChange = System.DateTime.UtcNow
     let mutable cubeAngularVelocity = Vector4(0.f, 1.f, 0.f, float32 autoOrbitSpeed)
 
@@ -80,10 +91,9 @@ type FractalDimension() =
     let mutable previousMids = Array.create 3 noteZero
     let mutable previousMidsIndex = 0
     let mutable smoothAverageMids = Vector2.Zero
-    let bvr = sqrt 12.f
-    let mutable bassHoleTarget = Vector3(bvr, 0.f, 0.f)
-    let mutable midsHoleTarget = Vector3(0.f, bvr, 0.f)
-    let mutable highHoleTarget = Vector3(0.f, 0.f, bvr)
+    let mutable bassHoleTarget = Vector3(1.f, 0.f, 0.f)
+    let mutable midsHoleTarget = Vector3(0.f, 1.f, 0.f)
+    let mutable highHoleTarget = Vector3(0.f, 0.f, 1.f)
     let mutable lastVolume = 0.001f
     let mutable bassHole = bassHoleTarget
     let mutable midsHole = midsHoleTarget
@@ -150,7 +160,7 @@ type FractalDimension() =
             let minimumBass = 0.0075f
             for i = 0 to bassNotes.Length - 1 do
                 if bassNotes.[i].mag > minimumBass && bassNotes.[i].mag > 1.25f * avgLastBassMag bassNotes.[i].freq then
-                    bassHoleTarget <- bvr * (1.f - minimumBass / bassNotes.[i].mag) * (toWorldSpace bassNotes.[i].freq Bass)
+                    bassHoleTarget <- (1.f - minimumBass / bassNotes.[i].mag) * (toWorldSpace bassNotes.[i].freq Bass)
                 if canJerk &&
                     bassNotes.[i].mag > minimumBassForJerk &&
                     (let t = (System.DateTime.UtcNow - lastAngularChange).TotalSeconds in t > 0.66 / float bassNotes.[i].mag || t > 1.5) &&
@@ -163,15 +173,15 @@ type FractalDimension() =
             let minimumMids = 0.001f
             for i = 0 to midsNotes.Length - 1 do
                 if midsNotes.[i].mag > minimumMids then
-                    let worldSpace =  toWorldSpace midsNotes.[i].freq Mids
-                    midsHoleTarget <- bvr * (1.f - minimumMids / midsNotes.[i].mag) * worldSpace
+                    let worldSpace = toWorldSpace midsNotes.[i].freq Mids
+                    midsHoleTarget <- (1.f - minimumMids / midsNotes.[i].mag) * worldSpace
                     previousMids.[previousMidsIndex] <- {freq = System.MathF.Pow(midsNotes.[i].freq, 0.5f); mag = midsNotes.[i].mag}
                     previousMidsIndex <- (previousMidsIndex + 1) % previousMids.Length
             let minimumHigh = 0.0005f
             for i = 0 to highNotes.Length - 1 do
                 if highNotes.[i].mag > minimumHigh then
-                    let worldSpace =  toWorldSpace highNotes.[i].freq High
-                    highHoleTarget <- bvr * (1.f - minimumHigh / highNotes.[i].mag) * worldSpace
+                    let worldSpace = toWorldSpace highNotes.[i].freq High
+                    highHoleTarget <- (1.f - minimumHigh / highNotes.[i].mag) * worldSpace
                     previousHigh.[previousHighIndex] <- {freq = highNotes.[i].freq; mag = 1.775f * highNotes.[i].mag}
                     previousHighIndex <- (previousHighIndex + 1) % previousHigh.Length
             lastVolume <- volume
@@ -231,7 +241,7 @@ type FractalDimension() =
             let modulo = 15.f * MathHelper.Pi
             let half = modulo / 2.f
             let m = abs (((float32 playTime + half) % modulo) / half - 1.f)
-            let d = orbitDist - 2.2f * m
+            let d = orbitDist - 2.1f * m
             let projectionConstant = d*(projectiveFar+projectiveNear)/(projectiveFar-projectiveNear) - (2.f*projectiveFar*projectiveNear)/(projectiveFar-projectiveNear)
             position <- -(Vector4(0.f, 0.f, projectionConstant, d) * viewMatrix).Xyz
 
@@ -246,12 +256,15 @@ type FractalDimension() =
         GL.Uniform3(GL.GetUniformLocation(renderShader, "midsHole"), midsHole)
         GL.Uniform3(GL.GetUniformLocation(renderShader, "highHole"), highHole)
 
-        if play && not question then
-            let magic = -cos (playTime / 6.)
+        GL.Uniform1(GL.GetUniformLocation(renderShader, "deType"), deToInt distanceEstimate)
+        if play && distanceEstimate <> None then
+            let magic = -cos (playTime / 10.)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
             let scale = -(0.15 * (asin (-cos (playTime / 6.)) + 1.) + 1.95)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "mandelboxScale"), float32 scale)
-            let kaleidoscope =  min (8. * ((max (-cos (playTime / 21.)) 0.3) - 0.3)) 1.
+            let kaleidoscope =
+                let t = (playTime - kaleidoTime) / 1.42
+                if kaleido then min t 1. else max (1. - t) 0.
             GL.Uniform1(GL.GetUniformLocation(renderShader, "kaleido"), float32 kaleidoscope)
 
         let smoothScale (v: Vector2) (arr: Note[]) =
@@ -308,9 +321,19 @@ type FractalDimension() =
             else
                 audioResponsive <- true
                 audioOutCapture.Reset ()
-        | Keys.Slash, (false, true, false), false ->
-            question <- not question
-            GL.Uniform1(GL.GetUniformLocation(renderShader, "question"), if question then 1 else 0)
+        | Keys.D0, _, false ->
+            distanceEstimate <- None
+        | Keys.D1, _, false ->
+                distanceEstimate <- Mandelbox
+        | Keys.D2, _, false ->
+            distanceEstimate <- Mandelbulb
+        | Keys.D3, _, false ->
+            distanceEstimate <- Klienian
+        | Keys.D4, _, false ->
+            distanceEstimate <- Menger
+        | Keys.Space, _, false ->
+            kaleido <- not kaleido
+            kaleidoTime <- playTime
         | _ -> base.OnKeyDown e
     override _.OnMouseMove move =
         mouseLastMove <- System.DateTime.UtcNow

@@ -260,10 +260,12 @@ type FractalDimension() =
         if play && distanceEstimate <> None then
             let magic = -cos (playTime / 10.)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
+            let magicLin = (playTime / 20.) % 2.
+            GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumberLin"), float32 (min magicLin (2. - magicLin)))
             let scale = -(0.15 * (asin (-cos (playTime / 6.)) + 1.) + 1.95)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "mandelboxScale"), float32 scale)
             let kaleidoscope =
-                let t = min ((playTime - kaleidoTime) / 1.75) 1.
+                let t = min ((playTime - kaleidoTime) / 1.05) 1.
                 sqrt (if kaleido then t else (1. - t))
             GL.Uniform1(GL.GetUniformLocation(renderShader, "kaleido"), float32 kaleidoscope)
 

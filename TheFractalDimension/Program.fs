@@ -258,7 +258,7 @@ type FractalDimension() =
 
         GL.Uniform1(GL.GetUniformLocation(renderShader, "deType"), deToInt distanceEstimate)
         if play && distanceEstimate <> None then
-            let magic = -cos (playTime / 10.)
+            let magic = if distanceEstimate = Mandelbulb then -1. else -cos (playTime / 10.)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
             let magicLin = (playTime / 20.) % 2.
             GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumberLin"), float32 (min magicLin (2. - magicLin)))

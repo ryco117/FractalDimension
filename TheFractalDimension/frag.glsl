@@ -157,11 +157,11 @@ float distanceEstimator(vec3 t)
 	// Mandelbulb
 	else if (deType == 2) {
 		const int maxIterations = 7;
-		const float reScale = 1.0;
+		const float reScale = 0.75;
 		t *= reScale;
-		t = vec3(bound(t.x, 1.9), bound(t.y, 1.9), bound(t.z, 1.9));
+		t = vec3(bound(t.x, 2.0), bound(t.y, 2.0), bound(t.z, 2.0));
 		vec3 s = t;
-		float power = 5.0 + 7*magicNumberLin;
+		float power = 5.0 + 8.0*magicNumberLin;
 		float dr = 1.0;
 		float r = 0.0;
 		for (int i = 0; i < maxIterations; i++) {
@@ -179,9 +179,9 @@ float distanceEstimator(vec3 t)
 			s = zr*vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
 			s += t;
 
-			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/3.0);
-			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/3.0);
-			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/3.0);
+			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/4.0);
+			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/4.0);
+			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/4.0);
 		}
 		return 0.5*log(r)*r/dr / reScale;
 	}//*/
@@ -225,7 +225,7 @@ float distanceEstimator(vec3 t)
 		float d1=max(xx,max(yy,zz)); //distance to the box
 		float d=d1; //current computed distance
 		float p=1.0;
-		float mengerScale = 2.75 + 0.75*magicNumberLin;
+		float mengerScale = 2.55 + 0.85*magicNumberLin;
 		float halfScale = mengerScale / 2.0;
 
 		orbitTrap.xyz = abs(vec3(xx, yy, zz));

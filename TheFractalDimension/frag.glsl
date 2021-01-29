@@ -260,9 +260,11 @@ float distanceEstimator(vec3 t)
 		float r2 = dot(s, s);
 		float DEfactor = 1.0;
 
-		float theta = pi*sin(4.0*pi*magicNumberLin);
+		//float theta = pi*sin(4.0*pi*magicNumberLin);
+		float theta = pi*boundReflect(10.0*magicNumberLin, 1.0);
 		mat2 rotato1 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
-		theta = 0.1125*pi*sin(0.65*pi*magicNumberLin);
+		//theta = 0.1115*pi*sin(0.7*pi*magicNumberLin);
+		theta = 0.111*pi*boundReflect(21.0*magicNumberLin, 1.0);
 		mat2 rotato2 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
 
 		for(int i = 0; i < maxIterations && r2 < 1000.0; i++) {
@@ -277,9 +279,9 @@ float distanceEstimator(vec3 t)
 			s = scale*s - (scale - 1.0)*center;
 			r2 = dot(s, s);
 
-			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/2.2);
-			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/2.2);
-			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/2.2);
+			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/2.15);
+			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/2.15);
+			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/2.15);
 
 			DEfactor *= scale;
 		}

@@ -94,7 +94,7 @@ type FractalDimension() =
     let mutable bassHoleTarget = Vector3(1.f, 0.f, 0.f)
     let mutable midsHoleTarget = Vector3(0.f, 1.f, 0.f)
     let mutable highHoleTarget = Vector3(0.f, 0.f, 1.f)
-    let mutable lastVolume = 0.001f
+    let mutable lastVolume = 0.0001f
     let mutable bassHole = bassHoleTarget
     let mutable midsHole = midsHoleTarget
     let mutable highHole = highHoleTarget
@@ -187,7 +187,7 @@ type FractalDimension() =
             lastVolume <- volume
             previousBass.[previousBassIndex] <- bassArray
             previousBassIndex <- (previousBassIndex + 1) % previousBass.Length
-    let audioOutCapture = new EzSound.AudioOutStreamer(onDataAvail, fun () -> lastVolume <- 0.001f)
+    let audioOutCapture = new EzSound.AudioOutStreamer(onDataAvail, fun () -> lastVolume <- 0.0001f)
     override this.OnLoad () =
         // Set default values
         GL.Hint(HintTarget.MultisampleFilterHintNv, HintMode.Nicest)

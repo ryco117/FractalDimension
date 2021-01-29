@@ -106,22 +106,16 @@ float d_basic(vec3 t)
 {
 	const float thicc = 0.02;
     float r = length(t.xy);
-    return max(r - 0.942, (abs(r*t.z) - thicc)/length(t) + thicc);
+    return max(r - 0.9425, (length(r*t.z) - thicc)/length(t) + thicc);
 }
 float distanceEstimator(vec3 t)
 {
 	orbitTrap = vec4(1.0, 1.0, 1.0, 1.0);
 
-	// Balls
-	//return length(t) - 0.1;
-
-	if (deType == 0) {
-		return 1000.0;
-	}
 	//*/
 	// Mandelbox
-	else if (deType == 1) {
-		const int maxIterations = 7;
+	if (deType == 1) {
+		const int maxIterations = 6;
 		vec3 s = t;
 		float DEfactor = 1.0;
 		float r2 = 1.0;
@@ -159,14 +153,15 @@ float distanceEstimator(vec3 t)
 		const int maxIterations = 7;
 		const float reScale = 0.75;
 		t *= reScale;
-		t = vec3(bound(t.x, 2.0), bound(t.y, 2.0), bound(t.z, 2.0));
+		t = vec3(boundReflect(t.x, 2.0), boundReflect(t.y, 2.0), boundReflect(t.z, 2.0));
 		vec3 s = t;
 		float power = 5.0 + 8.0*magicNumberLin;
 		float dr = 1.0;
 		float r = 0.0;
 		for (int i = 0; i < maxIterations; i++) {
 			r = length(s);
-			if (r > 1.25) break;
+			const float b = 1.25;
+			if (r > b) break;
 
 			float theta = acos(s.z/r);
 			float phi = atan(s.y, s.x);
@@ -179,9 +174,10 @@ float distanceEstimator(vec3 t)
 			s = zr*vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
 			s += t;
 
-			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/4.0);
-			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/4.0);
-			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/4.0);
+			const float twoB = b+b;
+			orbitTrap.x = min(orbitTrap.x, length(s/twoB - bassHole)/b);
+			orbitTrap.y = min(orbitTrap.y, length(s/twoB - midsHole)/b);
+			orbitTrap.z = min(orbitTrap.z, length(s/twoB - highHole)/b);
 		}
 		return 0.5*log(r)*r/dr / reScale;
 	}//*/
@@ -192,13 +188,13 @@ float distanceEstimator(vec3 t)
 		const float reScale = 0.2;
 		t *= reScale;
 		const vec3 cellSize = vec3(0.63248, 0.78632, 0.875);
-		vec3 s = vec3(bound(t.x, cellSize.x), bound(t.y, cellSize.y), bound(t.z, cellSize.z));
+		vec3 s = t;
 		float DEfactor = 1.0;
 		float theta = 2.0*pi*magicNumberLin;
 		mat2 rotato = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
 		for(int i = 0; i < maxIterations; i++) {
 			if (i == int(2.0*magicNumberLin + 2.0)) {
-				s.xy = s.xy * rotato;
+				s.xy *= rotato;
 			}
 
 			s = 2.0*clamp(s, -cellSize, cellSize) - s;
@@ -207,9 +203,9 @@ float distanceEstimator(vec3 t)
 			float k = max(0.70968 / r2, 1.0);
 			s *= k; DEfactor *= k;
 
-			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/2.75);
-			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/2.75);
-			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/2.75);
+			orbitTrap.x = min(orbitTrap.x, length(s/1.5 - bassHole)/3.0);
+			orbitTrap.y = min(orbitTrap.y, length(s/1.5 - midsHole)/3.0);
+			orbitTrap.z = min(orbitTrap.z, length(s/1.5 - highHole)/3.0);
 		}
 		return (d_basic(s)/DEfactor)/reScale;
 	} //*/
@@ -228,7 +224,7 @@ float distanceEstimator(vec3 t)
 		float mengerScale = 2.55 + 0.85*magicNumberLin;
 		float halfScale = mengerScale / 2.0;
 
-		orbitTrap.xyz = abs(vec3(xx, yy, zz));
+		orbitTrap.xyz = abs(vec3(xx/1.25, yy/1.25, zz/1.25));
 
 		for (int i = 0; i < maxIterations; i++) {
 			p *= mengerScale;
@@ -242,22 +238,62 @@ float distanceEstimator(vec3 t)
 			d=max(d,d1); //intersection
 
 			if (i == 3) {
-				const float rat = 0.275;
+				const float rat = 0.32;
 				vec3 q = vec3(xx, yy, zz)/mengerScale;
-				vec3 col = vec3(length(q - bassHole)/3.0, length(q - midsHole)/3.0, length(q - highHole)/3.0);
+				vec3 col = vec3(length(q - bassHole)/3.8, length(q - midsHole)/3.8, length(q - highHole)/3.8);
 				orbitTrap.xyz = rat*orbitTrap.xyz + (1.0 - rat)*col;
 			}
 		}
 		return d/reScale;
 	}//*/
+	//*/
+	// Knighty's Kaleidoscopic IFS
+	else if (deType == 5) {
+		const int maxIterations = 9;
+		const float reScale = 0.475;
+		const float scale = 2.0;
+		t = vec3(bound(t.x, 4.0), bound(t.y, 4.0), bound(t.z, 4.0));
+		vec3 s = reScale*t;
+		//vec3 center = normalize(bassHole);
+		const vec3 center = vec3(sqrt(0.5), sqrt(0.3), sqrt(0.2));
+		//vec3 center = normalize(t);
+		float r2 = dot(s, s);
+		float DEfactor = 1.0;
 
-	return 1000.0;
+		float theta = pi*sin(4.0*pi*magicNumberLin);
+		mat2 rotato1 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
+		theta = 0.1125*pi*sin(0.65*pi*magicNumberLin);
+		mat2 rotato2 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
+
+		for(int i = 0; i < maxIterations && r2 < 1000.0; i++) {
+			s.xy *= rotato1;
+
+			if(s.x+s.y<0.0){float x1=-s.y;s.y=-s.x;s.x=x1;}
+			if(s.x+s.z<0.0){float x1=-s.z;s.z=-s.x;s.x=x1;}
+			if(s.y+s.z<0.0){float y1=-s.z;s.z=-s.y;s.y=y1;}
+
+			s.yz *= rotato2;
+
+			s = scale*s - (scale - 1.0)*center;
+			r2 = dot(s, s);
+
+			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/2.2);
+			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/2.2);
+			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/2.2);
+
+			DEfactor *= scale;
+		}
+		return (sqrt(r2) - 2.0) / DEfactor / reScale;
+	}//*/
+	else {
+		return 1000.0;
+	}
 }
 
 const float maxBrightness = 1.4;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
 vec4 scaleColor(float si, vec3 col) {
-	col *= pow(1.0 - si/float(maxIterations), 0.3);
+	col *= pow(1.0 - si/float(maxIterations), 0.295);
 	if(dot(col, col) > maxBrightnessR2) {
 		col = maxBrightness*normalize(col);
 	}
@@ -275,10 +311,12 @@ void main(void)
 	const float near = 1.0;
 	const float far = 2.0;
 	const float projectionConstant = d*(far+near)/(far-near) - (2.0*far*near)/(far-near);
-	const float maxDistance = 10.0;
-	float testTheta = boundReflect(getAngle(coord),(1.0-kaleido)*2.0*pi + kaleido*pi/6.0);
-	vec2 tCoord = length(coord) * vec2(cos(testTheta), sin(testTheta));
-	float magicTheta = pi*magicNumber;
+	const float maxDistance = 20.0;
+	//vec2 tempCoord = coord-avgHighHole-avgMidsHole;
+	vec2 tempCoord = coord;
+	float magicTheta = boundReflect(getAngle(tempCoord),(1.0-kaleido)*2.0*pi + kaleido*pi/6.0);
+	vec2 tCoord = length(tempCoord) * vec2(cos(magicTheta), sin(magicTheta));
+	magicTheta = pi*magicNumber;
 	float choiceDot = dot(coord.xy, vec2(cos(magicTheta), sin(magicTheta)));
 	vec2 choice = choiceDot > 0.0 ? avgHighHole : avgMidsHole;
 	float otherThing = 2.2*dot(choice, tCoord.xy);
@@ -286,7 +324,7 @@ void main(void)
 	newCoord = vec2(boundReflect(newCoord.x, 1.0), boundReflect(newCoord.y, 1.0));
 	vec3 direction = normalize((projectiveInverse * vec4(newCoord.x*d, newCoord.y*d, projectionConstant, d)).xyz);
 	const float minTravel = 0.63;
-	vec3 pos = cameraPosition + minTravel*direction;
+	vec3 pos = deType == 2 ? cameraPosition : cameraPosition + minTravel*direction;
 	const float hitDistance = 0.00001;
 	float minDist = maxDistance;
 	float minI = 0.0;
@@ -301,16 +339,15 @@ void main(void)
 			travel += dist;
 			i++;
 		}
-		dist = min(0.99 * distanceEstimator(pos), 1.0);
+		dist = min(0.99 * distanceEstimator(pos), 2.0);
 
 		if (dist <= hitDistance) {
             float smoothI = float(i);// - (log(travel)/10.0);
 			orbitTrap.x = pow(orbitTrap.x, 0.725);
 			orbitTrap.y = pow(orbitTrap.y, 0.725);
 			orbitTrap.z = pow(orbitTrap.z, 0.725);
-			//orbitTrap = vec4(mix(orbitTrap.xyz, abs(pos), exp(-(pos.x*pos.x + pos.y*pos.y + pos.z*pos.z))), orbitTrap.w);
-			//orbitTrap = vec4(mix(orbitTrap.xyz, abs(pos), exp(-(abs(pos.x) + abs(pos.y) + abs(pos.z)))), orbitTrap.w);
 			fragColor = scaleColor(smoothI, orbitTrap.xyz);
+			//fragColor = phongLighting(scaleColor(smoothI, orbitTrap.xyz).xyz);
 			return;
 		}
 

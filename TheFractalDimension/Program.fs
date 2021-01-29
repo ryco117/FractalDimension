@@ -29,13 +29,14 @@ type Note = {freq: float32; mag: float32}
 type NoteRange = Bass | Mids | High
 
 // Fractal Types?!?!
-type DistanceEstimate = None | Mandelbox | Mandelbulb | Klienian | Menger
+type DistanceEstimate = None | Mandelbox | Mandelbulb | Klienian | Menger | IFS
 let deToInt = function
 | None -> 0
 | Mandelbox -> 1
 | Mandelbulb -> 2
 | Klienian -> 3
 | Menger -> 4
+| IFS -> 5
 
 let windowsSettings = NativeWindowSettings.Default
 windowsSettings.NumberOfSamples <- 8
@@ -61,7 +62,6 @@ type FractalDimension() =
     // Demo
     let autoOrbitSpeed = 0.05f
     let orbitDist = 3.8f
-    let mutable play = true
     let mutable playTime = 0.
     let mutable kaleido = false
     let mutable kaleidoTime = -100.
@@ -188,9 +188,9 @@ type FractalDimension() =
             previousBass.[previousBassIndex] <- bassArray
             previousBassIndex <- (previousBassIndex + 1) % previousBass.Length
     let audioOutCapture = new EzSound.AudioOutStreamer(onDataAvail, fun () -> lastVolume <- 0.001f)
-    override _.OnLoad () =
+    override this.OnLoad () =
         // Set default values
-        GL.Enable EnableCap.Multisample
+        GL.Hint(HintTarget.MultisampleFilterHintNv, HintMode.Nicest)
         GL.ClearColor (0.f, 0.f, 0.f, 1.f)
         GL.PolygonMode(MaterialFace.Front, PolygonMode.Fill)
         GL.DepthFunc DepthFunction.Lequal
@@ -217,13 +217,12 @@ type FractalDimension() =
         GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 0, 0)
         GL.EnableVertexAttribArray 0
         GL.Uniform1(GL.GetUniformLocation(renderShader, "mandelboxScale"), -1.5f)
-
-        base.OnLoad ()
     override this.OnRenderFrame eventArgs =
         let deltaTime = eventArgs.Time
         GL.Clear (ClearBufferMask.ColorBufferBit ||| ClearBufferMask.DepthBufferBit)
 
-        if play then
+        // Update the rotatiom amd angular momentum of the camera
+        do
             playTime <- playTime + System.Math.Pow(float lastVolume, 0.65) * deltaTime
             let deltaTime = float32 deltaTime
             let w = cubeAngularVelocity.W
@@ -232,12 +231,17 @@ type FractalDimension() =
             rotation <- (rotation * r).Normalized()
             cubeAngularVelocity <- Vector4(cubeAngularVelocity.Xyz, w + (autoOrbitSpeed - w) * (1.f - exp (-deltaTime/2.75f)))
 
+        // Update view matrix 
         let mutable viewMatrix = projectionInverse * Matrix4.CreateFromQuaternion rotation
+
+        // Update position of note-vectors
         let smooth = (1.f - exp (float32 deltaTime / -1.4f))
         bassHole <- bassHole + (bassHoleTarget - bassHole) * smooth
         midsHole <- midsHole + (midsHoleTarget - midsHole) * smooth
         highHole <- highHole + (highHoleTarget - highHole) * smooth
-        if play then
+
+        // Update the rotatiom amd angular momentum of the camera
+        do
             let modulo = 15.f * MathHelper.Pi
             let half = modulo / 2.f
             let m = abs (((float32 playTime + half) % modulo) / half - 1.f)
@@ -257,7 +261,7 @@ type FractalDimension() =
         GL.Uniform3(GL.GetUniformLocation(renderShader, "highHole"), highHole)
 
         GL.Uniform1(GL.GetUniformLocation(renderShader, "deType"), deToInt distanceEstimate)
-        if play && distanceEstimate <> None then
+        if distanceEstimate <> None then
             let magic = if distanceEstimate = Mandelbulb then -1. else -cos (playTime / 10.)
             GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
             let magicLin = (playTime / 20.) % 2.
@@ -333,6 +337,8 @@ type FractalDimension() =
             distanceEstimate <- Klienian
         | Keys.D4, _, false ->
             distanceEstimate <- Menger
+        | Keys.D5, _, false ->
+            distanceEstimate <- IFS
         | Keys.Space, _, false ->
             kaleido <- not kaleido
             kaleidoTime <- playTime

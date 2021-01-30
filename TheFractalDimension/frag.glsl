@@ -250,7 +250,7 @@ float distanceEstimator(vec3 t)
 	// Knighty's Kaleidoscopic IFS
 	else if (deType == 5) {
 		const int maxIterations = 9;
-		const float reScale = 0.475;
+		const float reScale = 0.48;
 		const float scale = 2.0;
 		t = vec3(bound(t.x, 4.0), bound(t.y, 4.0), bound(t.z, 4.0));
 		vec3 s = reScale*t;
@@ -261,10 +261,10 @@ float distanceEstimator(vec3 t)
 		float DEfactor = 1.0;
 
 		//float theta = pi*sin(4.0*pi*magicNumberLin);
-		float theta = pi*boundReflect(10.0*magicNumberLin, 1.0);
+		float theta = pi*boundReflect(3.0*magicNumberLin, 1.0);
 		mat2 rotato1 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
 		//theta = 0.1115*pi*sin(0.7*pi*magicNumberLin);
-		theta = 0.111*pi*boundReflect(21.0*magicNumberLin, 1.0);
+		theta = 0.111*pi*boundReflect(5.0*magicNumberLin, 1.0);
 		mat2 rotato2 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
 
 		for(int i = 0; i < maxIterations && r2 < 1000.0; i++) {
@@ -274,7 +274,10 @@ float distanceEstimator(vec3 t)
 			if(s.x+s.z<0.0){float x1=-s.z;s.z=-s.x;s.x=x1;}
 			if(s.y+s.z<0.0){float y1=-s.z;s.z=-s.y;s.y=y1;}
 
-			s.yz *= rotato2;
+			if (magicNumberLin > 4.0/5.0)
+				s.zx *= rotato2;
+			else
+				s.yz *= rotato2;
 
 			s = scale*s - (scale - 1.0)*center;
 			r2 = dot(s, s);

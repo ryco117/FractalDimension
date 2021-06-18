@@ -13,8 +13,10 @@ uniform int deType;
 uniform vec3 bassHole;
 uniform vec3 midsHole;
 uniform vec3 highHole;
-uniform vec2 avgMidsHole;
-uniform vec2 avgHighHole;
+uniform vec3 avgMidsHole;
+uniform vec3 avgHighHole;
+uniform vec2 avgMidsPlot;
+uniform vec2 avgHighPlot;
 
 const float pi = 3.14159265358;
 const float e = 2.718281828;
@@ -29,6 +31,19 @@ const float ambientStrength = 0.35;
 const vec3 lightDir = normalize(vec3(1.0, -0.6, -1.5));
 const vec3 lightColor = vec3(0.95, 0.95, 0.95);
 const vec3 ambientLight = ambientStrength * lightColor;
+
+mat3 buildRot3(vec3 u, float theta)
+{
+	float c = cos(theta);
+	float cC = 1.0 - c;
+	float s = sin(theta);
+	float sC = 1.0 - s;
+	return mat3(
+		c+u.x*u.x*cC, u.y*u.x*cC+u.z*s, u.z*u.x*cC-u.y*s,
+		u.x*u.y*cC-u.z*s, c+u.y*u.y*cC, u.z*u.y*cC+u.x*s,
+		u.x*u.z*cC+u.y*s, u.y*u.z*cC-u.x*s, c+u.z*u.z*cC
+	);
+}
 
 vec2 powc(float x, vec2 s)
 {
@@ -135,9 +150,9 @@ float distanceEstimator(vec3 t)
 				DEfactor /= r2;
 			}
 
-			orbitTrap.x = min(orbitTrap.x, length(s/BVR - bassHole)/2.0);
-			orbitTrap.y = min(orbitTrap.y, length(s/BVR - midsHole)/2.0);
-			orbitTrap.z = min(orbitTrap.z, length(s/BVR - highHole)/2.0);
+			orbitTrap.x = min(orbitTrap.x, length(s/BVR - bassHole)/1.9);
+			orbitTrap.y = min(orbitTrap.y, length(s/BVR - midsHole)/1.9);
+			orbitTrap.z = min(orbitTrap.z, length(s/BVR - highHole)/1.9);
 			//orbitTrap.w = min(orbitTrap.w, length(s));
 
 			s = s*mandelboxScale + t;
@@ -150,12 +165,12 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Mandelbulb
 	else if (deType == 2) {
-		const int maxIterations = 7;
-		const float reScale = 0.75;
+		const int maxIterations = 6;
+		const float reScale = 0.7225;
 		t *= reScale;
 		t = vec3(boundReflect(t.x, 2.0), boundReflect(t.y, 2.0), boundReflect(t.z, 2.0));
 		vec3 s = t;
-		float power = 5.0 + 8.0*magicNumberLin;
+		float power = 4.0 + 12.0*magicNumberLin;
 		float dr = 1.0;
 		float r = 0.0;
 		for (int i = 0; i < maxIterations; i++) {
@@ -254,48 +269,73 @@ float distanceEstimator(vec3 t)
 		const float scale = 2.0;
 		t = vec3(bound(t.x, 4.0), bound(t.y, 4.0), bound(t.z, 4.0));
 		vec3 s = reScale*t;
-		//vec3 center = normalize(bassHole);
 		const vec3 center = vec3(sqrt(0.5), sqrt(0.3), sqrt(0.2));
-		//vec3 center = normalize(t);
 		float r2 = dot(s, s);
 		float DEfactor = 1.0;
 
-		//float theta = pi*sin(4.0*pi*magicNumberLin);
-		float theta = pi*boundReflect(3.0*magicNumberLin, 1.0);
-		mat2 rotato1 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
-		//theta = 0.1115*pi*sin(0.7*pi*magicNumberLin);
-		theta = 0.111*pi*boundReflect(5.0*magicNumberLin, 1.0);
-		mat2 rotato2 = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
+		float theta = pi*boundReflect(3.25*magicNumberLin, 1.0);
+		mat3 rotato1 = buildRot3(normalize(avgMidsHole), theta);
+		theta = 0.1105*pi*boundReflect(6.0*magicNumberLin, 1.0);
+		mat3 rotato2 = buildRot3(normalize(avgHighHole), theta);
 
 		for(int i = 0; i < maxIterations && r2 < 1000.0; i++) {
-			s.xy *= rotato1;
+			s *= rotato1;
 
 			if(s.x+s.y<0.0){float x1=-s.y;s.y=-s.x;s.x=x1;}
 			if(s.x+s.z<0.0){float x1=-s.z;s.z=-s.x;s.x=x1;}
 			if(s.y+s.z<0.0){float y1=-s.z;s.z=-s.y;s.y=y1;}
 
-			if (magicNumberLin > 4.0/5.0)
-				s.zx *= rotato2;
-			else
-				s.yz *= rotato2;
+			s *= rotato2;
 
 			s = scale*s - (scale - 1.0)*center;
 			r2 = dot(s, s);
 
-			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/2.15);
-			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/2.15);
-			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/2.15);
+			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/2.0);
+			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/2.0);
+			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/2.0);
 
 			DEfactor *= scale;
 		}
 		return (sqrt(r2) - 2.0) / DEfactor / reScale;
 	}//*/
 	else {
+		//*/
+		const int maxIterations = 4;
+		const float helixR = 0.1;
+		const float helixH = 0.25;
+		const float helixScale = 3.0;
+		const float ezThing = sqrt(helixScale);
+		const float pih = pi * helixH;
+		vec3 s = t;
+		float len = length(s.xy);
+		float d = len - helixR;
+
+		mat3 m = buildRot3(vec3(1.0, 0.0, 0.0), pi/2.0*(0.1*(magicNumberLin - 0.5) + 1.0));
+		mat3 hm = helixScale * m;
+		float DEfactor = 1.0;
+
+		for (int i = 0; i < maxIterations && len < ezThing; i++)
+		{
+			//s.z -= pow(-2.0, i) * 2.0 * pih * magicNumberLin / 10.0;
+			
+			s.z += helixH * atan(s.y, s.x);
+			s = vec3(log(length(s.xy)), atan(s.y, s.x), mod(s.z + pih, 2.0 * pih) - pih);
+
+			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/4.0);
+			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/4.0);
+			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/4.0);
+
+			len = length(s.xz);
+			d = min(d, (len - helixR)/DEfactor);
+			s *= hm;
+			DEfactor *= helixScale;
+		}
+		return d;//*/
 		return 1000.0;
 	}
 }
 
-const float maxBrightness = 1.4;
+const float maxBrightness = 1.5;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
 vec4 scaleColor(float si, vec3 col) {
 	col *= pow(1.0 - si/float(maxIterations), 0.295);
@@ -317,13 +357,13 @@ void main(void)
 	const float far = 2.0;
 	const float projectionConstant = d*(far+near)/(far-near) - (2.0*far*near)/(far-near);
 	const float maxDistance = 20.0;
-	//vec2 tempCoord = coord-avgHighHole-avgMidsHole;
+	//vec2 tempCoord = coord-avgHighPlot-avgMidsPlot;
 	vec2 tempCoord = coord;
 	float magicTheta = boundReflect(getAngle(tempCoord),(1.0-kaleido)*2.0*pi + kaleido*pi/6.0);
 	vec2 tCoord = length(tempCoord) * vec2(cos(magicTheta), sin(magicTheta));
 	magicTheta = pi*magicNumber;
 	float choiceDot = dot(coord.xy, vec2(cos(magicTheta), sin(magicTheta)));
-	vec2 choice = choiceDot > 0.0 ? avgHighHole : avgMidsHole;
+	vec2 choice = choiceDot > 0.0 ? avgHighPlot : avgMidsPlot;
 	float otherThing = 2.2*dot(choice, tCoord.xy);
 	vec2 newCoord = tCoord.xy + pow(abs(choiceDot), 1.145)*otherThing*choice;
 	newCoord = vec2(boundReflect(newCoord.x, 1.0), boundReflect(newCoord.y, 1.0));
@@ -336,7 +376,7 @@ void main(void)
 	float travel = minTravel;
 	magicTheta = 2.0*getAngle(newCoord);
 	vec2 newestCoord = length(newCoord)*vec2(cos(magicTheta), sin(magicTheta));
-	float newMagic = (magicNumber + 2.0)/2.0 + 1.75*dot(coord, avgMidsHole);
+	float newMagic = (magicNumber + 2.0)/2.0 + 1.75*dot(coord, avgMidsPlot);
 	for (int i = 0; i < maxIterations; i++) {
 		float dist = newMagic - travel;
 		if(dist > 0.0) {
@@ -344,7 +384,7 @@ void main(void)
 			travel += dist;
 			i++;
 		}
-		dist = min(0.99 * distanceEstimator(pos), 2.0);
+		dist = distanceEstimator(pos);
 
 		if (dist <= hitDistance) {
             float smoothI = float(i);// - (log(travel)/10.0);
@@ -361,7 +401,7 @@ void main(void)
 			minI = float(i);
 		}
 
-		pos += dist*direction;
+		pos += 0.99*dist*direction;
 		travel += dist;
 		if (travel > maxDistance) {
 			direction = normalize((projectiveInverse * vec4(coord.x*d, coord.y*d, projectionConstant, d)).xyz);

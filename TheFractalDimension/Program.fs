@@ -42,8 +42,33 @@ let windowsSettings = NativeWindowSettings.Default
 windowsSettings.NumberOfSamples <- 8
 windowsSettings.Title <- "FractalDimension"
 
+let toWorldSpace t noteType =
+    let s = match noteType with
+            | Bass -> System.Math.Pow(float t, 0.75)
+            | Mids -> System.Math.Pow(float t, 0.55)
+            | High -> System.Math.Pow(float t, 0.4)
+    CubeFillingCurve.curveToCubeN 8 s
+
+let icon =
+    let imageData =
+        let ico = new System.Drawing.Icon "FractalDimensionLogo.ico"
+        use ms = new System.IO.MemoryStream ()
+        let bitmap = ico.ToBitmap ()
+        let bitmapData = bitmap.LockBits (System.Drawing.Rectangle (System.Drawing.Point(0, 0), bitmap.Size), System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb)
+        let scan = bitmapData.Scan0
+        let stride = bitmapData.Stride
+        for y = 0 to bitmapData.Height - 1 do
+            for x = 0 to bitmapData.Width - 1 do
+                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x) |> ms.WriteByte
+                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 1) |> ms.WriteByte
+                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 2) |> ms.WriteByte
+                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 3) |> ms.WriteByte
+        bitmap.UnlockBits bitmapData
+        bitmapData.Width, bitmapData.Height, ms.ToArray ()
+    Input.WindowIcon [|Input.Image imageData|]
+
 type FractalDimension() =
-    inherit GameWindow(GameWindowSettings.Default, windowsSettings)
+    inherit GameWindow(GameWindowSettings.Default, windowsSettings, Icon = icon)
 
     // Window/Game World
     let mutable preFullscreenSize = Vector2i.One
@@ -56,8 +81,8 @@ type FractalDimension() =
     let mutable distanceEstimate = Mandelbox
 
     // Render
-    let mutable renderShader = 0
-    let mutable vertexArrayObject = 0
+    let mutable renderShader = 0u
+    let mutable vertexArrayObject = 0u
 
     // Demo
     let autoOrbitSpeed = 0.05f
@@ -82,15 +107,17 @@ type FractalDimension() =
     do complexZero.X <- 0.f
     do complexZero.Y <- 0.f
     let noteZero = {freq = 0.f; mag = 0.f}
-    let mutable previousBass = Array.create 2 [|complexZero|]
+    let mutable previousBass = Array.create 4 [|complexZero|]
     let mutable previousBassIndex = 0
     let mutable smoothAverageBass = Vector3.Zero
-    let mutable previousHigh = Array.create 3 noteZero
+    let mutable previousHigh = Array.create 8 noteZero
     let mutable previousHighIndex = 0
-    let mutable smoothAverageHigh = Vector2.Zero
-    let mutable previousMids = Array.create 3 noteZero
+    let mutable smoothAverageHigh = Vector3.Zero
+    let mutable smoothAverageHigh2 = Vector2.Zero
+    let mutable previousMids = Array.create 8 noteZero
     let mutable previousMidsIndex = 0
-    let mutable smoothAverageMids = Vector2.Zero
+    let mutable smoothAverageMids = Vector3.Zero
+    let mutable smoothAverageMids2 = Vector2.Zero
     let mutable bassHoleTarget = Vector3(1.f, 0.f, 0.f)
     let mutable midsHoleTarget = Vector3(0.f, 1.f, 0.f)
     let mutable highHoleTarget = Vector3(0.f, 0.f, 1.f)
@@ -101,12 +128,6 @@ type FractalDimension() =
     let onDataAvail samplingRate (complex: NAudio.Dsp.Complex[]) =
         if complex.Length > 0 then
             let mag (c: NAudio.Dsp.Complex) = sqrt(c.X*c.X + c.Y*c.Y)
-            let toWorldSpace t noteType =
-                let s = match noteType with
-                        | Bass -> System.Math.Pow(float t, 0.75)
-                        | Mids -> System.Math.Pow(float t, 0.55)
-                        | High -> System.Math.Pow(float t, 0.4)
-                CubeFillingCurve.curveToCubeN 8 s
             let freqResolution = samplingRate / float complex.Length
             let getStrongest maxCount delta (input: NAudio.Dsp.Complex[]) =
                 let fLen = float32 input.Length
@@ -182,7 +203,7 @@ type FractalDimension() =
                 if highNotes.[i].mag > minimumHigh then
                     let worldSpace = toWorldSpace highNotes.[i].freq High
                     highHoleTarget <- (1.f - minimumHigh / highNotes.[i].mag) * worldSpace
-                    previousHigh.[previousHighIndex] <- {freq = highNotes.[i].freq; mag = 1.775f * highNotes.[i].mag}
+                    previousHigh.[previousHighIndex] <- {freq = System.MathF.Pow(highNotes.[i].freq, 0.75f); mag = 1.775f * highNotes.[i].mag}
                     previousHighIndex <- (previousHighIndex + 1) % previousHigh.Length
             lastVolume <- volume
             previousBass.[previousBassIndex] <- bassArray
@@ -204,19 +225,19 @@ type FractalDimension() =
         GL.BindVertexArray vertexArrayObject
 
         let vertexBufferObject = GL.GenBuffer ()
-        GL.BindBuffer(BufferTarget.ArrayBuffer, vertexBufferObject)
+        GL.BindBuffer(BufferTargetARB.ArrayBuffer, vertexBufferObject)
         let vertices = [|
             -1.0f;  1.0f;
              1.0f;  1.0f;
             -1.0f; -1.0f;
              1.0f; -1.0f
         |]
-        GL.BufferData(BufferTarget.ArrayBuffer, sizeof<float32> * vertices.Length, vertices, BufferUsageHint.StaticDraw)
+        GL.BufferData(BufferTargetARB.ArrayBuffer, vertices, BufferUsageARB.StaticDraw)
 
         GL.UseProgram renderShader
-        GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 0, 0)
-        GL.EnableVertexAttribArray 0
-        GL.Uniform1(GL.GetUniformLocation(renderShader, "mandelboxScale"), -1.5f)
+        GL.VertexAttribPointer(0u, 2, VertexAttribPointerType.Float, false, 0, nativeint 0)
+        GL.EnableVertexAttribArray 0u
+        GL.Uniform1f(GL.GetUniformLocation(renderShader, "mandelboxScale"), -1.5f)
     override this.OnRenderFrame eventArgs =
         let deltaTime = eventArgs.Time
         GL.Clear (ClearBufferMask.ColorBufferBit ||| ClearBufferMask.DepthBufferBit)
@@ -240,7 +261,7 @@ type FractalDimension() =
         midsHole <- midsHole + (midsHoleTarget - midsHole) * smooth
         highHole <- highHole + (highHoleTarget - highHole) * smooth
 
-        // Update the rotatiom amd angular momentum of the camera
+        // Update the rotation amd angular momentum of the camera
         do
             let modulo = 15.f * MathHelper.Pi
             let half = modulo / 2.f
@@ -254,37 +275,49 @@ type FractalDimension() =
         GL.UseProgram renderShader
 
         // Set the shader uniforms
-        GL.UniformMatrix4(GL.GetUniformLocation(renderShader, "projectiveInverse"), false, &viewMatrix)
-        GL.Uniform3(GL.GetUniformLocation(renderShader, "cameraPosition"), position)
-        GL.Uniform3(GL.GetUniformLocation(renderShader, "bassHole"), bassHole)
-        GL.Uniform3(GL.GetUniformLocation(renderShader, "midsHole"), midsHole)
-        GL.Uniform3(GL.GetUniformLocation(renderShader, "highHole"), highHole)
+        let viewMatrixBytes = Array.init 16 (fun i -> viewMatrix.Item (i / 4, i % 4))
+        GL.UniformMatrix4f(GL.GetUniformLocation(renderShader, "projectiveInverse"), 1, false, viewMatrixBytes)
+        GL.Uniform3f(GL.GetUniformLocation(renderShader, "cameraPosition"), &position)
+        GL.Uniform3f(GL.GetUniformLocation(renderShader, "bassHole"), &bassHole)
+        GL.Uniform3f(GL.GetUniformLocation(renderShader, "midsHole"), &midsHole)
+        GL.Uniform3f(GL.GetUniformLocation(renderShader, "highHole"), &highHole)
 
-        GL.Uniform1(GL.GetUniformLocation(renderShader, "deType"), deToInt distanceEstimate)
+        GL.Uniform1i(GL.GetUniformLocation(renderShader, "deType"), deToInt distanceEstimate)
         if distanceEstimate <> None then
             let magic = if distanceEstimate = Mandelbulb then -1. else -cos (playTime / 10.)
-            GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
+            GL.Uniform1f(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
             let magicLin = (playTime / 20.) % 2.
-            GL.Uniform1(GL.GetUniformLocation(renderShader, "magicNumberLin"), float32 (min magicLin (2. - magicLin)))
+            GL.Uniform1f(GL.GetUniformLocation(renderShader, "magicNumberLin"), float32 (min magicLin (2. - magicLin)))
             let scale = -(0.15 * (asin (-cos (playTime / 6.)) + 1.) + 1.95)
-            GL.Uniform1(GL.GetUniformLocation(renderShader, "mandelboxScale"), float32 scale)
+            GL.Uniform1f(GL.GetUniformLocation(renderShader, "mandelboxScale"), float32 scale)
             let kaleidoscope =
-                let t = min ((playTime - kaleidoTime) / 1.05) 1.
+                let t = min ((playTime - kaleidoTime) / 0.6) 1.
                 sqrt (if kaleido then t else (1. - t))
-            GL.Uniform1(GL.GetUniformLocation(renderShader, "kaleido"), float32 kaleidoscope)
+            GL.Uniform1f(GL.GetUniformLocation(renderShader, "kaleido"), float32 kaleidoscope)
 
-        let smoothScale (v: Vector2) (arr: Note[]) =
+        let smoothScale (v: Vector3) (arr: Note[]) r =
+            let smooth = (1.f - exp (float32 deltaTime / -6.f))
+            let mutable avg = Vector3.Zero
+            for v in arr do
+                avg <- avg + toWorldSpace v.freq r
+            avg <- avg / (float32 arr.Length)
+            v + (avg - v) * smooth
+        smoothAverageHigh <- smoothScale smoothAverageHigh previousHigh NoteRange.High
+        GL.Uniform3f(GL.GetUniformLocation(renderShader, "avgHighHole"), &smoothAverageHigh)
+        smoothAverageMids <- smoothScale smoothAverageMids previousMids NoteRange.Mids
+        GL.Uniform3f(GL.GetUniformLocation(renderShader, "avgMidsHole"), &smoothAverageMids)
+
+        let smoothScale2 (v: Vector2) (arr: Note[]) =
             let mutable avg = Vector2.Zero
             for v in arr do
                 let theta = MathHelper.TwoPi * v.freq
                 avg <- avg + System.MathF.Pow(v.mag, 0.425f) * Vector2(System.MathF.Cos theta, System.MathF.Sin theta)
             avg <- avg / (float32 arr.Length)
             v + (avg - v) * smooth
-        smoothAverageHigh <- smoothScale smoothAverageHigh previousHigh
-        GL.Uniform2(GL.GetUniformLocation(renderShader, "avgHighHole"), smoothAverageHigh)
-
-        smoothAverageMids <- smoothScale smoothAverageMids previousMids
-        GL.Uniform2(GL.GetUniformLocation(renderShader, "avgMidsHole"), smoothAverageMids)
+        smoothAverageHigh2 <- smoothScale2 smoothAverageHigh2 previousHigh
+        GL.Uniform2f(GL.GetUniformLocation(renderShader, "avgHighPlot"), &smoothAverageHigh2)
+        smoothAverageMids2 <- smoothScale2 smoothAverageMids2 previousMids
+        GL.Uniform2f(GL.GetUniformLocation(renderShader, "avgMidsPlot"), &smoothAverageMids2)
 
         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4)
         this.Context.SwapBuffers ()

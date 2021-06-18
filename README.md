@@ -1,3 +1,4 @@
+![FractalDimension](FractalDimensionLogo.ico)
 # FractalDimension
 
 ### About the project

@@ -59,10 +59,14 @@ let icon =
         let stride = bitmapData.Stride
         for y = 0 to bitmapData.Height - 1 do
             for x = 0 to bitmapData.Width - 1 do
-                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x) |> ms.WriteByte
-                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 1) |> ms.WriteByte
-                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 2) |> ms.WriteByte
-                System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 3) |> ms.WriteByte
+                let blue = System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x)
+                let green = System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 1)
+                let red = System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 2)
+                let alpha = System.Runtime.InteropServices.Marshal.ReadByte (scan, stride * y + 4 * x + 3)
+                ms.WriteByte red
+                ms.WriteByte green
+                ms.WriteByte blue
+                ms.WriteByte alpha
         bitmap.UnlockBits bitmapData
         bitmapData.Width, bitmapData.Height, ms.ToArray ()
     Input.WindowIcon [|Input.Image imageData|]

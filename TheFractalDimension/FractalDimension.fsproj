@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net5.0-windows</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <Platforms>x64</Platforms>
     <RunPostBuildEvent>1</RunPostBuildEvent>
   </PropertyGroup>
@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="FractalDimensionLogo.ico" />
     <None Include="frag.glsl" />
     <None Include="vert.glsl" />
     <Compile Include="CubeFillingCurve.fs" />
@@ -19,6 +20,8 @@
     <Compile Include="EzShader.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+
+  <ItemGroup />
 
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.0.0" />
@@ -31,7 +34,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="robocopy &quot;$(ProjectDir)\.&quot; &quot;$(TargetDir)\.&quot; vert.glsl frag.glsl&#xD;&#xA;if %25errorlevel%25 leq 1 exit 0 else exit %25errorlevel%25" />
+    <Exec Command="robocopy &quot;$(ProjectDir)\.&quot; &quot;$(TargetDir)\.&quot; vert.glsl frag.glsl FractalDimensionLogo.ico&#xD;&#xA;if %25errorlevel%25 leq 1 exit 0 else exit %25errorlevel%25" />
   </Target>
 
 </Project>

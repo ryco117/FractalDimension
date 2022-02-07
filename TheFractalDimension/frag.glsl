@@ -20,7 +20,7 @@ uniform vec2 avgHighPlot;
 
 const float pi = 3.14159265358;
 const float e = 2.718281828;
-const int maxIterations = 45;
+const int maxIterations = 120;
 const float epsilon = 0.00001;
 const vec3 dirX = vec3(1.0, 0.0, 0.0);
 const vec3 dirY = vec3(0.0, 1.0, 0.0);
@@ -130,7 +130,7 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Mandelbox
 	if (deType == 1) {
-		const int maxIterations = 6;
+		const int maxIterations = 8;
 		vec3 s = t;
 		float DEfactor = 1.0;
 		float r2 = 1.0;
@@ -165,10 +165,10 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Mandelbulb
 	else if (deType == 2) {
-		const int maxIterations = 6;
+		const int maxIterations = 7;
 		const float reScale = 0.7225;
+		t = vec3(boundReflect(t.x, 5.5), boundReflect(t.y, 5.5), boundReflect(t.z, 5.5));
 		t *= reScale;
-		t = vec3(boundReflect(t.x, 2.0), boundReflect(t.y, 2.0), boundReflect(t.z, 2.0));
 		vec3 s = t;
 		float power = 4.0 + 12.0*magicNumberLin;
 		float dr = 1.0;
@@ -194,13 +194,13 @@ float distanceEstimator(vec3 t)
 			orbitTrap.y = min(orbitTrap.y, length(s/twoB - midsHole)/b);
 			orbitTrap.z = min(orbitTrap.z, length(s/twoB - highHole)/b);
 		}
-		return 0.5*log(r)*r/dr / reScale;
+		return min(0.5*log(r)*r/dr / reScale, 3.0);
 	}//*/
     //*/
     // Knighty's Pseudo Klienian*
 	else if (deType == 3) {
 		const int maxIterations = 6;
-		const float reScale = 0.2;
+		const float reScale = 0.4;
 		t *= reScale;
 		const vec3 cellSize = vec3(0.63248, 0.78632, 0.875);
 		vec3 s = t;
@@ -264,10 +264,10 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Knighty's Kaleidoscopic IFS
 	else if (deType == 5) {
-		const int maxIterations = 9;
+		const int maxIterations = 10;
 		const float reScale = 0.48;
 		const float scale = 2.0;
-		t = vec3(bound(t.x, 4.0), bound(t.y, 4.0), bound(t.z, 4.0));
+		t = vec3(bound(t.x, 7.5), bound(t.y, 7.5), bound(t.z, 7.5));
 		vec3 s = reScale*t;
 		const vec3 center = vec3(sqrt(0.5), sqrt(0.3), sqrt(0.2));
 		float r2 = dot(s, s);
@@ -299,38 +299,6 @@ float distanceEstimator(vec3 t)
 		return (sqrt(r2) - 2.0) / DEfactor / reScale;
 	}//*/
 	else {
-		//*/
-		const int maxIterations = 4;
-		const float helixR = 0.1;
-		const float helixH = 0.25;
-		const float helixScale = 3.0;
-		const float ezThing = sqrt(helixScale);
-		const float pih = pi * helixH;
-		vec3 s = t;
-		float len = length(s.xy);
-		float d = len - helixR;
-
-		mat3 m = buildRot3(vec3(1.0, 0.0, 0.0), pi/2.0*(0.1*(magicNumberLin - 0.5) + 1.0));
-		mat3 hm = helixScale * m;
-		float DEfactor = 1.0;
-
-		for (int i = 0; i < maxIterations && len < ezThing; i++)
-		{
-			//s.z -= pow(-2.0, i) * 2.0 * pih * magicNumberLin / 10.0;
-			
-			s.z += helixH * atan(s.y, s.x);
-			s = vec3(log(length(s.xy)), atan(s.y, s.x), mod(s.z + pih, 2.0 * pih) - pih);
-
-			orbitTrap.x = min(orbitTrap.x, length(s - bassHole)/4.0);
-			orbitTrap.y = min(orbitTrap.y, length(s - midsHole)/4.0);
-			orbitTrap.z = min(orbitTrap.z, length(s - highHole)/4.0);
-
-			len = length(s.xz);
-			d = min(d, (len - helixR)/DEfactor);
-			s *= hm;
-			DEfactor *= helixScale;
-		}
-		return d;//*/
 		return 1000.0;
 	}
 }
@@ -338,7 +306,7 @@ float distanceEstimator(vec3 t)
 const float maxBrightness = 1.5;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
 vec4 scaleColor(float si, vec3 col) {
-	col *= pow(1.0 - si/float(maxIterations), 0.295);
+	col *= pow(1.0 - si/float(maxIterations), 1.25);
 	if(dot(col, col) > maxBrightnessR2) {
 		col = maxBrightness*normalize(col);
 	}
@@ -356,7 +324,7 @@ void main(void)
 	const float near = 1.0;
 	const float far = 2.0;
 	const float projectionConstant = d*(far+near)/(far-near) - (2.0*far*near)/(far-near);
-	const float maxDistance = 20.0;
+	const float maxDistance = 100.0;
 	//vec2 tempCoord = coord-avgHighPlot-avgMidsPlot;
 	vec2 tempCoord = coord;
 	float magicTheta = boundReflect(getAngle(tempCoord),(1.0-kaleido)*2.0*pi + kaleido*pi/6.0);

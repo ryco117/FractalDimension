@@ -1,6 +1,6 @@
 ﻿(*
 FractalDimension - Experimental ray-marching based audio visualizer
-Copyright (C) 2020  Ryan Andersen
+Copyright (C) 2022  Ryan Andersen
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -113,7 +113,6 @@ type FractalDimension() =
     let noteZero = {freq = 0.f; mag = 0.f}
     let mutable previousBass = Array.create 4 [|complexZero|]
     let mutable previousBassIndex = 0
-    let mutable smoothAverageBass = Vector3.Zero
     let mutable previousHigh = Array.create 8 noteZero
     let mutable previousHighIndex = 0
     let mutable smoothAverageHigh = Vector3.Zero
@@ -135,14 +134,14 @@ type FractalDimension() =
             let freqResolution = samplingRate / float complex.Length
             let getStrongest maxCount delta (input: NAudio.Dsp.Complex[]) =
                 let fLen = float32 input.Length
-                let arr = Array.init input.Length (fun i -> {freq = (float32 i) / fLen; mag = mag input.[i]})
+                let arr = Array.init input.Length (fun i -> {freq = (float32 i) / fLen; mag = mag input[i]})
                 let cmp {freq = _; mag = a} {freq = _; mag = b} = sign (b - a)
                 let sorted = Array.sortWith cmp arr
                 let rec getList acc size (arr: Note[]) =
                     if arr.Length = 0  || size = maxCount then
                         acc
                     else
-                        let t = arr.[0].freq
+                        let t = arr[0].freq
                         let remaining, friends = Array.partition (fun {freq = s; mag = _} -> abs (t - s) > delta) arr
                         let m = Array.fold (fun acc {freq = _; mag = m} -> acc + m) 0.f friends
                         getList ({freq = t; mag = m}::acc) (size + 1) remaining
@@ -161,20 +160,32 @@ type FractalDimension() =
             let highStart = roundToInt (highStartFreq / freqResolution)
             let highEnd = roundToInt (highEndFreq / freqResolution)
             let bassArray = Array.sub complex bassStart (bassEnd - bassStart)
-            let bassNotes = getStrongest 1 0.4f bassArray
-            let midsNotes = getStrongest 1 0.2f (Array.sub complex midsStart (midsEnd - midsStart))
-            let highNotes = getStrongest 1 0.3f (Array.sub complex highStart (highEnd - highStart))
+            let volumeAdjust =
+                let volumeScale = 1.25f
+                Array.map (fun note -> {freq = note.freq; mag = note.mag * volumeScale})
+            let bassNotes =
+                bassArray
+                |> getStrongest 1 0.4f
+                |> volumeAdjust
+            let midsNotes =
+                Array.sub complex midsStart (midsEnd - midsStart)
+                |> getStrongest 1 0.2f
+                |> volumeAdjust
+            let highNotes =
+                Array.sub complex highStart (highEnd - highStart)
+                |> getStrongest 1 0.3f
+                |> volumeAdjust
             let avgLastBassMag x =
                 let mutable s = 0.f
                 for i = 0 to previousBass.Length - 1 do
                     s <- s +
-                        if previousBass.[i].Length = 0 then
+                        if previousBass[i].Length = 0 then
                             0.f
                         else
                             let j =
-                                let j = int (round (x * float32 previousBass.[i].Length))
-                                if j >= previousBass.[i].Length then previousBass.[i].Length - 1 else j
-                            mag previousBass.[i].[j]
+                                let j = int (round (x * float32 previousBass[i].Length))
+                                if j >= previousBass[i].Length then previousBass[i].Length - 1 else j
+                            mag (previousBass[i][j])
                 s / float32 previousBass.Length
             let volume = 
                 let summer a = Array.sumBy (fun n -> n.mag) a
@@ -182,35 +193,35 @@ type FractalDimension() =
             let mutable canJerk = true
             let minimumBassForJerk = 0.05f
             let autoOrbitJerk = 0.185f
-            let minimumBass = 0.0075f
+            let minimumBass = 0.007f
             for i = 0 to bassNotes.Length - 1 do
-                if bassNotes.[i].mag > minimumBass && bassNotes.[i].mag > 1.25f * avgLastBassMag bassNotes.[i].freq then
-                    bassHoleTarget <- (1.f - minimumBass / bassNotes.[i].mag) * (toWorldSpace bassNotes.[i].freq Bass)
+                if bassNotes[i].mag > minimumBass && bassNotes[i].mag > 1.25f * avgLastBassMag bassNotes[i].freq then
+                    bassHoleTarget <- (1.f - minimumBass / bassNotes[i].mag) * (toWorldSpace bassNotes[i].freq Bass)
                 if canJerk &&
-                    bassNotes.[i].mag > minimumBassForJerk &&
-                    (let t = (System.DateTime.UtcNow - lastAngularChange).TotalSeconds in t > 0.66 / float bassNotes.[i].mag || t > 1.5) &&
-                    bassNotes.[i].mag > 10.f * avgLastBassMag bassNotes.[i].freq then
+                    bassNotes[i].mag > minimumBassForJerk &&
+                    (let t = (System.DateTime.UtcNow - lastAngularChange).TotalSeconds in t > 0.66 / float bassNotes[i].mag || t > 1.5) &&
+                    bassNotes[i].mag > 10.f * avgLastBassMag bassNotes[i].freq then
                     cubeAngularVelocity <- Vector4(
-                        (toWorldSpace bassNotes.[i].freq Bass).Normalized(),
+                        (toWorldSpace bassNotes[i].freq Bass).Normalized(),
                         (sqrt volume) * autoOrbitJerk)
                     lastAngularChange <- System.DateTime.UtcNow
                     canJerk <- false
             let minimumMids = 0.001f
             for i = 0 to midsNotes.Length - 1 do
-                if midsNotes.[i].mag > minimumMids then
-                    let worldSpace = toWorldSpace midsNotes.[i].freq Mids
-                    midsHoleTarget <- (1.f - minimumMids / midsNotes.[i].mag) * worldSpace
-                    previousMids.[previousMidsIndex] <- {freq = System.MathF.Pow(midsNotes.[i].freq, 0.5f); mag = midsNotes.[i].mag}
+                if midsNotes[i].mag > minimumMids then
+                    let worldSpace = toWorldSpace midsNotes[i].freq Mids
+                    midsHoleTarget <- (1.f - minimumMids / midsNotes[i].mag) * worldSpace
+                    previousMids[previousMidsIndex] <- {freq = System.MathF.Pow(midsNotes[i].freq, 0.5f); mag = midsNotes[i].mag}
                     previousMidsIndex <- (previousMidsIndex + 1) % previousMids.Length
             let minimumHigh = 0.0005f
             for i = 0 to highNotes.Length - 1 do
-                if highNotes.[i].mag > minimumHigh then
-                    let worldSpace = toWorldSpace highNotes.[i].freq High
-                    highHoleTarget <- (1.f - minimumHigh / highNotes.[i].mag) * worldSpace
-                    previousHigh.[previousHighIndex] <- {freq = System.MathF.Pow(highNotes.[i].freq, 0.75f); mag = 1.775f * highNotes.[i].mag}
+                if highNotes[i].mag > minimumHigh then
+                    let worldSpace = toWorldSpace highNotes[i].freq High
+                    highHoleTarget <- (1.f - minimumHigh / highNotes[i].mag) * worldSpace
+                    previousHigh[previousHighIndex] <- {freq = System.MathF.Pow(highNotes[i].freq, 0.75f); mag = 1.775f * highNotes[i].mag}
                     previousHighIndex <- (previousHighIndex + 1) % previousHigh.Length
             lastVolume <- volume
-            previousBass.[previousBassIndex] <- bassArray
+            previousBass[previousBassIndex] <- bassArray
             previousBassIndex <- (previousBassIndex + 1) % previousBass.Length
     let audioOutCapture = new EzSound.AudioOutStreamer(onDataAvail, fun () -> lastVolume <- 0.0001f)
     override this.OnLoad () =
@@ -260,7 +271,7 @@ type FractalDimension() =
         let mutable viewMatrix = projectionInverse * Matrix4.CreateFromQuaternion rotation
 
         // Update position of note-vectors
-        let smooth = (1.f - exp (float32 deltaTime / -1.4f))
+        let smooth = (1.f - exp (float32 deltaTime / -1.6f))
         bassHole <- bassHole + (bassHoleTarget - bassHole) * smooth
         midsHole <- midsHole + (midsHoleTarget - midsHole) * smooth
         highHole <- highHole + (highHoleTarget - highHole) * smooth

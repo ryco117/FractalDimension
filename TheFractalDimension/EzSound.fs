@@ -27,11 +27,11 @@ let DualRealToComplex (samples: float32[]) =
         (fun i ->
             let mutable z = Complex()
             // Mix stereo to mono
-            z.X <- (samples.[2 * i] + samples.[2 * i + 1]) / 2.f
+            z.X <- (samples[2 * i] + samples[2 * i + 1]) / 2.f
             // Only left
-            //z.X <- samples.[2 * i]
+            //z.X <- samples[2 * i]
             // Only right
-            //z.X <- samples.[2 * i + 1]
+            //z.X <- samples[2 * i + 1]
             z)
 
 type CustomCapture() =
@@ -58,7 +58,7 @@ type AudioOutStreamer(onDataAvail, onClose) =
             let finalLen = 1 <<< logSize
             let scale = float (complex.Length - 1) / float (finalLen - 1)
             let f x = int (float x * scale)
-            let finalForm = Array.init finalLen (fun i -> complex.[f i])
+            let finalForm = Array.init finalLen (fun i -> complex[f i])
             FastFourierTransform.FFT(true, logSize, finalForm)
             onDataAvail (float capture.WaveFormat.SampleRate / scale) finalForm
     let initCapture () =

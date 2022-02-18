@@ -5,6 +5,7 @@ out vec4 fragColor;
 
 uniform vec3 cameraPosition;
 uniform mat4 projectiveInverse;
+uniform float fTime;
 uniform float magicNumber;
 uniform float magicNumberLin;
 uniform float mandelboxScale;
@@ -19,8 +20,9 @@ uniform vec2 avgMidsPlot;
 uniform vec2 avgHighPlot;
 
 const float pi = 3.14159265358;
+const float tau = 2.0*pi;
 const float e = 2.718281828;
-const int maxIterations = 120;
+const int maxIterations = 150;
 const float epsilon = 0.00001;
 const vec3 dirX = vec3(1.0, 0.0, 0.0);
 const vec3 dirY = vec3(0.0, 1.0, 0.0);
@@ -117,12 +119,6 @@ float boundReflect(float x, float b) {
 vec3 gradient;
 vec4 orbitTrap;
 const vec3 cutNorm = normalize(vec3(-1.0, 1.0, -1.0));
-float d_basic(vec3 t)
-{
-	const float thicc = 0.02;
-    float r = length(t.xy);
-    return max(r - 0.9425, (length(r*t.z) - thicc)/length(t) + thicc);
-}
 float distanceEstimator(vec3 t)
 {
 	orbitTrap = vec4(1.0, 1.0, 1.0, 1.0);
@@ -130,7 +126,7 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Mandelbox
 	if (deType == 1) {
-		const int maxIterations = 8;
+		const int maxIterations = 6;
 		vec3 s = t;
 		float DEfactor = 1.0;
 		float r2 = 1.0;
@@ -150,9 +146,9 @@ float distanceEstimator(vec3 t)
 				DEfactor /= r2;
 			}
 
-			orbitTrap.x = min(orbitTrap.x, length(s/BVR - bassHole)/1.9);
-			orbitTrap.y = min(orbitTrap.y, length(s/BVR - midsHole)/1.9);
-			orbitTrap.z = min(orbitTrap.z, length(s/BVR - highHole)/1.9);
+			orbitTrap.x = min(orbitTrap.x, length(s/BVR - bassHole)/2.0);
+			orbitTrap.y = min(orbitTrap.y, length(s/BVR - midsHole)/2.0);
+			orbitTrap.z = min(orbitTrap.z, length(s/BVR - highHole)/2.0);
 			//orbitTrap.w = min(orbitTrap.w, length(s));
 
 			s = s*mandelboxScale + t;
@@ -165,12 +161,12 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Mandelbulb
 	else if (deType == 2) {
-		const int maxIterations = 7;
-		const float reScale = 0.7225;
-		t = vec3(boundReflect(t.x, 5.5), boundReflect(t.y, 5.5), boundReflect(t.z, 5.5));
+		const int maxIterations = 4;
+		const float reScale = 0.85;
+		t = vec3(boundReflect(t.x, 9.0), boundReflect(t.y, 9.0), boundReflect(t.z, 9.0));
 		t *= reScale;
 		vec3 s = t;
-		float power = 4.0 + 12.0*magicNumberLin;
+		float power = 5.0 + 10.0*magicNumberLin;
 		float dr = 1.0;
 		float r = 0.0;
 		for (int i = 0; i < maxIterations; i++) {
@@ -194,52 +190,65 @@ float distanceEstimator(vec3 t)
 			orbitTrap.y = min(orbitTrap.y, length(s/twoB - midsHole)/b);
 			orbitTrap.z = min(orbitTrap.z, length(s/twoB - highHole)/b);
 		}
-		return min(0.5*log(r)*r/dr / reScale, 3.0);
+		return min(0.5*log(r)*r/dr / reScale, 4.0);
 	}//*/
     //*/
     // Knighty's Pseudo Klienian*
 	else if (deType == 3) {
-		const int maxIterations = 6;
-		const float reScale = 0.4;
-		t *= reScale;
-		const vec3 cellSize = vec3(0.63248, 0.78632, 0.875);
-		vec3 s = t;
-		float DEfactor = 1.0;
-		float theta = 2.0*pi*magicNumberLin;
+		const int maxIterations = 4;
+		const float reScale = 0.5;
+		vec3 s = reScale*t;
+
+		float anim = 1.25 + 0.08*magicNumber;
+		float scale = 1.0;
+		float theta = 0.25*fTime;
 		mat2 rotato = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
-		for(int i = 0; i < maxIterations; i++) {
-			if (i == int(2.0*magicNumberLin + 2.0)) {
-				s.xy *= rotato;
+
+		for(int i = 0; i < maxIterations; i++)
+		{
+			if (i == 2) {
+				s.xz *= rotato;
 			}
 
-			s = 2.0*clamp(s, -cellSize, cellSize) - s;
-			//Inversion
-			float r2 = dot(s, s);
-			float k = max(0.70968 / r2, 1.0);
-			s *= k; DEfactor *= k;
+			s = -1.0 + 2.0*fract(0.5*s + 0.5);
 
-			orbitTrap.x = min(orbitTrap.x, length(s/1.5 - bassHole)/3.0);
-			orbitTrap.y = min(orbitTrap.y, length(s/1.5 - midsHole)/3.0);
-			orbitTrap.z = min(orbitTrap.z, length(s/1.5 - highHole)/3.0);
+			float r2 = dot(s,s);
+		
+			float k = anim/r2;
+			s *= k;
+			scale *= k;
+
+			orbitTrap.x = min(orbitTrap.x, length(s/1.5 - bassHole)/2.0);
+			orbitTrap.y = min(orbitTrap.y, length(s/1.5 - midsHole)/2.0);
+			orbitTrap.z = min(orbitTrap.z, length(s/1.5 - highHole)/2.0);
 		}
-		return (d_basic(s)/DEfactor)/reScale;
+	
+		return (0.25*abs(s.y)/scale) / reScale;
 	} //*/
 	//*/
 	// Menger
 	else if (deType == 4) {
-		const int maxIterations = 6;
-		const float reScale = 0.25;
-		t *= reScale;
-		vec3 s = t;
+		const int maxIterations = 5;
+
+		const float reScale = 0.3;
+		vec3 s = t*reScale;
+
+		s = vec3(boundReflect(s.x, 4.0), boundReflect(s.y, 4.0), boundReflect(s.z, 4.0));
+
 		s = s + 0.5; //center it by changing position and scale
 		float xx=abs(s.x-0.5)-0.5, yy=abs(s.y-0.5)-0.5, zz=abs(s.z-0.5)-0.5;
 		float d1=max(xx,max(yy,zz)); //distance to the box
 		float d=d1; //current computed distance
 		float p=1.0;
-		float mengerScale = 2.55 + 0.85*magicNumberLin;
+		//float mengerScale = 2.55 + 0.85*magicNumberLin;
+		float mengerScale = 3.0;
 		float halfScale = mengerScale / 2.0;
 
 		orbitTrap.xyz = abs(vec3(xx/1.25, yy/1.25, zz/1.25));
+
+		float theta = 0.04*fTime;
+		//mat3 rotato = buildRot3(normalize(bassHole), theta);
+		mat3 rotato = buildRot3(normalize(vec3(1, 2, 2)), theta);
 
 		for (int i = 0; i < maxIterations; i++) {
 			p *= mengerScale;
@@ -252,22 +261,24 @@ float distanceEstimator(vec3 t)
 
 			d=max(d,d1); //intersection
 
-			if (i == 3) {
-				const float rat = 0.32;
+			if (i % 2 == 0) {
+				const float rat = 0.68;
 				vec3 q = vec3(xx, yy, zz)/mengerScale;
-				vec3 col = vec3(length(q - bassHole)/3.8, length(q - midsHole)/3.8, length(q - highHole)/3.8);
+				vec3 col = vec3(length(q - bassHole)/3.75, length(q - midsHole)/3.75, length(q - highHole)/3.75);
 				orbitTrap.xyz = rat*orbitTrap.xyz + (1.0 - rat)*col;
 			}
+
+			s *= rotato;
 		}
 		return d/reScale;
 	}//*/
 	//*/
 	// Knighty's Kaleidoscopic IFS
 	else if (deType == 5) {
-		const int maxIterations = 10;
-		const float reScale = 0.48;
+		const int maxIterations = 8;
+		const float reScale = 0.65;
 		const float scale = 2.0;
-		t = vec3(bound(t.x, 7.5), bound(t.y, 7.5), bound(t.z, 7.5));
+		t = vec3(boundReflect(t.x, 9.0), boundReflect(t.y, 9.0), boundReflect(t.z, 9.0));
 		vec3 s = reScale*t;
 		const vec3 center = vec3(sqrt(0.5), sqrt(0.3), sqrt(0.2));
 		float r2 = dot(s, s);
@@ -303,10 +314,10 @@ float distanceEstimator(vec3 t)
 	}
 }
 
-const float maxBrightness = 1.5;
+const float maxBrightness = 1.585;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
 vec4 scaleColor(float si, vec3 col) {
-	col *= pow(1.0 - si/float(maxIterations), 1.25);
+	col *= pow(1.0 - si/float(maxIterations), 1.1);
 	if(dot(col, col) > maxBrightnessR2) {
 		col = maxBrightness*normalize(col);
 	}
@@ -327,7 +338,7 @@ void main(void)
 	const float maxDistance = 100.0;
 	//vec2 tempCoord = coord-avgHighPlot-avgMidsPlot;
 	vec2 tempCoord = coord;
-	float magicTheta = boundReflect(getAngle(tempCoord),(1.0-kaleido)*2.0*pi + kaleido*pi/6.0);
+	float magicTheta = boundReflect(getAngle(tempCoord),(1.0-kaleido)*tau + kaleido*pi/6.0);
 	vec2 tCoord = length(tempCoord) * vec2(cos(magicTheta), sin(magicTheta));
 	magicTheta = pi*magicNumber;
 	float choiceDot = dot(coord.xy, vec2(cos(magicTheta), sin(magicTheta)));
@@ -336,7 +347,7 @@ void main(void)
 	vec2 newCoord = tCoord.xy + pow(abs(choiceDot), 1.145)*otherThing*choice;
 	newCoord = vec2(boundReflect(newCoord.x, 1.0), boundReflect(newCoord.y, 1.0));
 	vec3 direction = normalize((projectiveInverse * vec4(newCoord.x*d, newCoord.y*d, projectionConstant, d)).xyz);
-	const float minTravel = 0.63;
+	const float minTravel = 0.65;
 	vec3 pos = deType == 2 ? cameraPosition : cameraPosition + minTravel*direction;
 	const float hitDistance = 0.00001;
 	float minDist = maxDistance;
@@ -355,7 +366,7 @@ void main(void)
 		dist = distanceEstimator(pos);
 
 		if (dist <= hitDistance) {
-            float smoothI = float(i);// - (log(travel)/10.0);
+			float smoothI = float(i);// - (log(travel)/10.0);
 			orbitTrap.x = pow(orbitTrap.x, 0.725);
 			orbitTrap.y = pow(orbitTrap.y, 0.725);
 			orbitTrap.z = pow(orbitTrap.z, 0.725);

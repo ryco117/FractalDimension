@@ -4,7 +4,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Platforms>x64</Platforms>
-    <RunPostBuildEvent>1</RunPostBuildEvent>
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
+    <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

@@ -38,9 +38,14 @@ let deToInt = function
 | Menger -> 4
 | IFS -> 5
 
+// Type for launch configuration
+type LaunchConstants = {volumeScale: float32}
+
 let windowsSettings = NativeWindowSettings.Default
 windowsSettings.NumberOfSamples <- 8
 windowsSettings.Title <- "FractalDimension"
+
+let DEBUG = true
 
 let toWorldSpace t noteType =
     let s = match noteType with
@@ -71,7 +76,7 @@ let icon =
         bitmapData.Width, bitmapData.Height, ms.ToArray ()
     Input.WindowIcon [|Input.Image imageData|]
 
-type FractalDimension() =
+type FractalDimension (config: LaunchConstants) =
     inherit GameWindow(GameWindowSettings.Default, windowsSettings, Icon = icon)
 
     // Window/Game World
@@ -161,8 +166,7 @@ type FractalDimension() =
             let highEnd = roundToInt (highEndFreq / freqResolution)
             let bassArray = Array.sub complex bassStart (bassEnd - bassStart)
             let volumeAdjust =
-                let volumeScale = 1.25f
-                Array.map (fun note -> {freq = note.freq; mag = note.mag * volumeScale})
+                Array.map (fun note -> {freq = note.freq; mag = note.mag * config.volumeScale})
             let bassNotes =
                 bassArray
                 |> getStrongest 1 0.4f
@@ -191,9 +195,9 @@ type FractalDimension() =
                 let summer a = Array.sumBy (fun n -> n.mag) a
                 summer bassNotes + summer midsNotes + summer highNotes
             let mutable canJerk = true
-            let minimumBassForJerk = 0.05f
-            let autoOrbitJerk = 0.185f
-            let minimumBass = 0.007f
+            let minimumBassForJerk = 0.08f
+            let autoOrbitJerk = 0.1825f
+            let minimumBass = 0.0075f
             for i = 0 to bassNotes.Length - 1 do
                 if bassNotes[i].mag > minimumBass && bassNotes[i].mag > 1.25f * avgLastBassMag bassNotes[i].freq then
                     bassHoleTarget <- (1.f - minimumBass / bassNotes[i].mag) * (toWorldSpace bassNotes[i].freq Bass)
@@ -271,7 +275,7 @@ type FractalDimension() =
         let mutable viewMatrix = projectionInverse * Matrix4.CreateFromQuaternion rotation
 
         // Update position of note-vectors
-        let smooth = (1.f - exp (float32 deltaTime / -1.6f))
+        let smooth = (1.f - exp (float32 deltaTime / -1.75f))
         bassHole <- bassHole + (bassHoleTarget - bassHole) * smooth
         midsHole <- midsHole + (midsHoleTarget - midsHole) * smooth
         highHole <- highHole + (highHoleTarget - highHole) * smooth
@@ -281,7 +285,7 @@ type FractalDimension() =
             let modulo = 15.f * MathHelper.Pi
             let half = modulo / 2.f
             let m = abs (((float32 playTime + half) % modulo) / half - 1.f)
-            let d = orbitDist - 2.1f * m
+            let d = orbitDist - 2.f * m
             let projectionConstant = d*(projectiveFar+projectiveNear)/(projectiveFar-projectiveNear) - (2.f*projectiveFar*projectiveNear)/(projectiveFar-projectiveNear)
             position <- -(Vector4(0.f, 0.f, projectionConstant, d) * viewMatrix).Xyz
 
@@ -298,7 +302,7 @@ type FractalDimension() =
         GL.Uniform3f(GL.GetUniformLocation(renderShader, "highHole"), &highHole)
 
         GL.Uniform1i(GL.GetUniformLocation(renderShader, "deType"), deToInt distanceEstimate)
-        if distanceEstimate <> None then
+        if distanceEstimate <> None  || DEBUG then
             let magic = if distanceEstimate = Mandelbulb then -1. else -cos (playTime / 10.)
             GL.Uniform1f(GL.GetUniformLocation(renderShader, "magicNumber"), float32 magic)
             let magicLin = (playTime / 20.) % 2.
@@ -309,9 +313,10 @@ type FractalDimension() =
                 let t = min ((playTime - kaleidoTime) / 0.6) 1.
                 sqrt (if kaleido then t else (1. - t))
             GL.Uniform1f(GL.GetUniformLocation(renderShader, "kaleido"), float32 kaleidoscope)
+            GL.Uniform1f(GL.GetUniformLocation(renderShader, "fTime"), float32 playTime)
 
         let smoothScale (v: Vector3) (arr: Note[]) r =
-            let smooth = (1.f - exp (float32 deltaTime / -6.f))
+            let smooth = (1.f - exp (float32 deltaTime / -10.f))
             let mutable avg = Vector3.Zero
             for v in arr do
                 avg <- avg + toWorldSpace v.freq r
@@ -401,7 +406,18 @@ type FractalDimension() =
     override _.OnClosing _ = exit 0
 
 [<EntryPoint>]
-let main _ =
-    use world = new FractalDimension()
+let main args =
+    let volume =
+        let rec findV i =
+            if i < args.Length then
+                try
+                    float32 args[i]
+                with
+                | err -> findV (i+1)
+            else
+                1.f
+        findV 0
+    let config = {volumeScale = volume}
+    use world = new FractalDimension (config)
     world.Run ()
     0

@@ -161,7 +161,7 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Mandelbulb
 	else if (deType == 2) {
-		const int maxIterations = 5;
+		const int maxIterations = 4;
 		const float reScale = 0.85;
 		t = vec3(boundReflect(t.x, 9.0), boundReflect(t.y, 9.0), boundReflect(t.z, 9.0));
 		t *= reScale;
@@ -185,12 +185,9 @@ float distanceEstimator(vec3 t)
 			s = r*vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
 			s += t;
 
-			const float twoB = b+b;
-			orbitTrap.x = min(orbitTrap.x, length(s/twoB - bassHole)/twoB);
-			orbitTrap.y = min(orbitTrap.y, length(s/twoB - midsHole)/twoB);
-			orbitTrap.z = min(orbitTrap.z, length(s/twoB - highHole)/twoB);
+			orbitTrap.xyz = min(orbitTrap.xyz, abs(s - (highHole + midsHole)/1.75));
 		}
-		return min(0.5*log(r)*r/dr / reScale, 5.0);
+		return min(0.5*log(r)*r/dr / reScale, 4.5);
 	}//*/
     //*/
     // Knighty's Pseudo Klienian*

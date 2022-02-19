@@ -275,7 +275,7 @@ type FractalDimension (config: LaunchConstants) =
         let mutable viewMatrix = projectionInverse * Matrix4.CreateFromQuaternion rotation
 
         // Update position of note-vectors
-        let smooth = (1.f - exp (float32 deltaTime / -1.75f))
+        let smooth = (1.f - exp (float32 deltaTime / -2.2f))
         bassHole <- bassHole + (bassHoleTarget - bassHole) * smooth
         midsHole <- midsHole + (midsHoleTarget - midsHole) * smooth
         highHole <- highHole + (highHoleTarget - highHole) * smooth
@@ -316,7 +316,7 @@ type FractalDimension (config: LaunchConstants) =
             GL.Uniform1f(GL.GetUniformLocation(renderShader, "fTime"), float32 playTime)
 
         let smoothScale (v: Vector3) (arr: Note[]) r =
-            let smooth = (1.f - exp (float32 deltaTime / -10.f))
+            let smooth = (1.f - exp (float32 deltaTime / -8.f))
             let mutable avg = Vector3.Zero
             for v in arr do
                 avg <- avg + toWorldSpace v.freq r

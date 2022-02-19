@@ -161,36 +161,36 @@ float distanceEstimator(vec3 t)
 	//*/
 	// Mandelbulb
 	else if (deType == 2) {
-		const int maxIterations = 4;
+		const int maxIterations = 5;
 		const float reScale = 0.85;
 		t = vec3(boundReflect(t.x, 9.0), boundReflect(t.y, 9.0), boundReflect(t.z, 9.0));
 		t *= reScale;
 		vec3 s = t;
-		float power = 5.0 + 10.0*magicNumberLin;
+		float power = 6.0 + 9.0*magicNumberLin;
 		float dr = 1.0;
 		float r = 0.0;
 		for (int i = 0; i < maxIterations; i++) {
 			r = length(s);
-			const float b = 1.25;
+			const float b = 1.5;
 			if (r > b) break;
 
 			float theta = acos(s.z/r);
 			float phi = atan(s.y, s.x);
 			dr = pow(r, power-1.0)*power*dr + 1.0;
 
-			float zr = pow(r, power);
+			r = pow(r, power);
 			theta *= power;
 			phi *= power;
 
-			s = zr*vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+			s = r*vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
 			s += t;
 
 			const float twoB = b+b;
-			orbitTrap.x = min(orbitTrap.x, length(s/twoB - bassHole)/b);
-			orbitTrap.y = min(orbitTrap.y, length(s/twoB - midsHole)/b);
-			orbitTrap.z = min(orbitTrap.z, length(s/twoB - highHole)/b);
+			orbitTrap.x = min(orbitTrap.x, length(s/twoB - bassHole)/twoB);
+			orbitTrap.y = min(orbitTrap.y, length(s/twoB - midsHole)/twoB);
+			orbitTrap.z = min(orbitTrap.z, length(s/twoB - highHole)/twoB);
 		}
-		return min(0.5*log(r)*r/dr / reScale, 4.0);
+		return min(0.5*log(r)*r/dr / reScale, 5.0);
 	}//*/
     //*/
     // Knighty's Pseudo Klienian*
@@ -230,7 +230,7 @@ float distanceEstimator(vec3 t)
 	else if (deType == 4) {
 		const int maxIterations = 5;
 
-		const float reScale = 0.3;
+		const float reScale = 0.425;
 		vec3 s = t*reScale;
 
 		s = vec3(boundReflect(s.x, 4.0), boundReflect(s.y, 4.0), boundReflect(s.z, 4.0));
@@ -284,7 +284,7 @@ float distanceEstimator(vec3 t)
 		float r2 = dot(s, s);
 		float DEfactor = 1.0;
 
-		float theta = pi*boundReflect(3.25*magicNumberLin, 1.0);
+		float theta = 0.5*fTime;
 		mat3 rotato1 = buildRot3(normalize(avgMidsHole), theta);
 		theta = 0.1105*pi*boundReflect(6.0*magicNumberLin, 1.0);
 		mat3 rotato2 = buildRot3(normalize(avgHighHole), theta);
